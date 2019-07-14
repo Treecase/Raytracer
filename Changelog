@@ -1,0 +1,12 @@
+
+
+2019-jul-13  Trevor Last  <trevorclast@gmail.com>
+
+Version 0.1.0 -- Initial release.
+
+* Changelog: Added.
+* Makefile: Added.
+* LICENSE: Added.
+* README.md: Added.
+* src/trace.py: Added.
+
