@@ -20,13 +20,28 @@ import numpy
 from PIL import Image
 import os
 
+from parser import parse
+from quad import Quad
+
 
 
 def main(_argv=None):
 
-    if argv is not None and len(argv) > 1 and _argv[1] == '--help' :
-        print('Usage: ' + _argv[0] + ' [OUTPUT_IMAGE_FILENAME]')
-        return
+    input_filename = 'world.txt'
+    output_filename = 'render.png'
+
+    if argv is not None and len(argv) > 1:
+        if _argv[1] == '--help' :
+            print('Usage: ' + _argv[0] + '[INPUT_FILE] [OUTPUT_FILE]')
+            print("INPUT_FILE defaults to '" + input_filename + "'")
+            print("OUTPUT_FILE defaults to '" + output_filename + "'")
+            return
+        else:
+            input_filename = _argv[1]
+
+        if len(_argv) > 2:
+            output_filename = _argv[2]
+
 
     # The output image
     _canvas = Image.new('RGB', ( 100, 100 ))
@@ -48,16 +63,10 @@ def main(_argv=None):
     origin = numpy.array([ camera_x, camera_y, camera_z ])
 
 
-    # Iterable of all the quads in the world
-    quads = (
-        ( numpy.array([ -1, +1, +0 ]),
-          numpy.array([ +1, +1, +0 ]),
-          numpy.array([ -1, -1, +0 ]), ),
-
-        ( numpy.array([ -1, -1, +0 ]),
-          numpy.array([ -1, +1, +0 ]),
-          numpy.array([ -1, -1, -2 ]), ),
-    )
+    # Read the world definition file
+    with open(input_filename) as world_file:
+        # Iterable of all the quads in the world
+        quads = parse(world_file)
 
     for screen_y in range(HEIGHT):
         for screen_x in range(WIDTH):
@@ -163,23 +172,15 @@ def main(_argv=None):
                     # The ray intersects
                     else:
                         #print('soln:', t * ray)
+                        # This quad is the closest intersection
                         if (intersection_t is None
                                 or t < intersection_t):
                             intersection_t = t
-
-                # If there was an intersection, set the pixel to the
-                # colour of the quad we intersected with
-                if intersection_t != None:
-                    # TODO: get the quad's colour
-                    colour = ( 255, 255, 255 )
+                            colour = quad.colour
 
                 canvas[( screen_x, screen_y )] = colour
 
     # Save the rendered image
-    output_filename = 'render.png'
-    if _argv is not None and len(_argv) > 1:
-        output_filename = _argv[1] 
-
     _canvas.save(output_filename)
 
 

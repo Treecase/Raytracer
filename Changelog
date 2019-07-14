@@ -1,11 +1,30 @@
 
 
+2019-jul-14  Trevor Last  <trevorclast@gmail.com>
+
+Version 0.2.0 -- File input.
+
+* Changelog: Removed an erroneous reference to a Makefile being created.
+* world.txt: Added.
+
+* src/parser.py: Added.
+(parse): Added. Parses the given file-like object.
+
+* src/quad.py: Added.
+(Quad): Added. Supports item retrieval. Item assignment raises a TypeError, as
+Quads should be immutable.
+
+* src/trace.py (main): Optional 1st command-line argument is the input
+filename, and the optional 2nd command-line argument is the output filename.
+The input file is parsed to get the world, instead of having a hardcoded array
+of quads.
+
+
 2019-jul-13  Trevor Last  <trevorclast@gmail.com>
 
 Version 0.1.0 -- Initial release.
 
 * Changelog: Added.
-* Makefile: Added.
 * LICENSE: Added.
 * README.md: Added.
 * src/trace.py: Added.

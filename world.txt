@@ -1,0 +1,35 @@
+# Demo input file to trace.py
+#
+# Lines beginning with '#' are comments, and are ignored along with empty
+#   lines. Note that the line must BEGIN with a '#', meaning NO OTHER
+#   CHARACTERS, even whitespace, can precede the '#' for it to be treated
+#   as a comment line.
+#
+# Each quad in the image is specified by 3 points,
+#   specified by 3 numbers, which may contain decimal points. The quad's
+#   colour is specified in the optional 4th line as a space-separated RGB
+#   triplet (RR GG BB). The quad's definition is ended by a line
+#   containing only a ';' character.
+#
+
+
+# no-colour quad in the XY plane
+-1  1  0
+ 1  1  0
+-1 -1  0
+;
+
+# red quad in the YZ plane
+-1 -1  0
+-1  1  0
+-1 -1 -2
+FF 00 00
+;
+
+# green quad in the XZ plane
+-1  1  0
+ 1  1  0
+-1  1 -2
+00 FF 00
+;
+
