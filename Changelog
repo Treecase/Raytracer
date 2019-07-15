@@ -1,10 +1,34 @@
 
 
+2019-jul-15  Trevor Last  <trevorclast@gmail.com>
+
+Version 0.3.0 -- Shading.
+
+* README.md: Fixed a spacing error.
+
+* src/common.py: Added.
+
+* src/parser.py (parse): Totally redone, to add support for lights.
+
+* src/pointlight.py: Added.
+
+* src/quad.py (Quad): Added the `hit' method, used to check for intersections.
+Changed the constructor, the colour is now a keyword argument.
+
+* src/trace.py (trace_ray): Added.
+(main): Supports shading (currently does Lambert and Blinn-Phong, as well as
+ambient).
+
+* world.txt: Since the world file format was updated, this was updated too.
+New comments, and added a light source object.
+
+
 2019-jul-14  Trevor Last  <trevorclast@gmail.com>
 
 Version 0.2.0 -- File input.
 
 * Changelog: Removed an erroneous reference to a Makefile being created.
+
 * world.txt: Added.
 
 * src/parser.py: Added.

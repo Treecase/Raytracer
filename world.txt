@@ -5,31 +5,63 @@
 #   CHARACTERS, even whitespace, can precede the '#' for it to be treated
 #   as a comment line.
 #
-# Each quad in the image is specified by 3 points,
-#   specified by 3 numbers, which may contain decimal points. The quad's
-#   colour is specified in the optional 4th line as a space-separated RGB
-#   triplet (RR GG BB). The quad's definition is ended by a line
-#   containing only a ';' character.
+# Each object in the world is specified by an object definition, in the
+#   form of a pseudo-JSON object. The object's type comes first, then an
+#   opening curly bracket. Next come the attributes, and finally a closing
+#   curly bracket.
+#
+# A quad object is given the type name 'Quad'. Immediately after the opening
+#   curly bracket, 3 triples of numbers must appear. Afterwards, any
+#   applicable named attributes may be listed.
+#
+# A point light object is given the type name 'PointLight'. Immediately
+#   after the opening curly bracket, 1 number triple must appear; then the
+#   applicable named attributes.
+#
+#
+# Valid type names
+#   'Quad'
+#   'PointLight'
+#
+# Valid named attributes
+#   'colour' or 'color'
+#       3 space-separated hexidecimal numbers between 0 and 255.
 #
 
 
 # no-colour quad in the XY plane
--1  1  0
- 1  1  0
--1 -1  0
-;
+Quad
+{
+    -1  1  0
+    -1 -1  0
+     1  1  0
+}
 
 # red quad in the YZ plane
--1 -1  0
--1  1  0
--1 -1 -2
-FF 00 00
-;
+Quad
+{
+    -1 -1  0
+    -1  1  0
+    -1 -1 -2
+
+    colour: FF 00 00
+}
 
 # green quad in the XZ plane
--1  1  0
- 1  1  0
--1  1 -2
-00 FF 00
-;
+Quad
+{
+    -1  1  0
+     1  1  0
+    -1  1 -2
+
+    colour: 00 FF 00
+}
+
+# white point light source
+PointLight
+{
+    -5 5 5
+
+    colour: FF FF FF
+}
 

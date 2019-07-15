@@ -22,6 +22,42 @@ import os
 
 from parser import parse
 from quad import Quad
+from pointlight import PointLight
+from common import *
+
+
+
+def trace_ray(origin, ray, surfaces):
+    """
+    Trace a ray, detecting intersections with any surface in surfaces.
+
+    origin
+        A 3D vector, representing the origin point.
+    ray
+        A 3D vector, representing the delta vector.
+    surfaces
+        Surfaces to consider for intersections.
+    """
+
+    # Intersection data
+    nearest_intersection = None
+    nearest_dist = None
+
+    # Check each surface for an intersection
+    for surface in surfaces:
+
+        intersection = surface.hit(origin, ray)
+
+        if intersection is not None:
+            dist = numpy.linalg.norm(intersection.point - origin)
+
+            # We're only interested in the intersection closest to
+            # the origin
+            if nearest_intersection is None or dist < nearest_dist:
+                nearest_intersection = intersection
+                nearest_dist = dist
+
+    return nearest_intersection
 
 
 
@@ -30,33 +66,45 @@ def main(_argv=None):
     input_filename = 'world.txt'
     output_filename = 'render.png'
 
+
+    # Handle command-line arguments
     if argv is not None and len(argv) > 1:
+        # Help message
         if _argv[1] == '--help' :
             print('Usage: ' + _argv[0] + '[INPUT_FILE] [OUTPUT_FILE]')
             print("INPUT_FILE defaults to '" + input_filename + "'")
             print("OUTPUT_FILE defaults to '" + output_filename + "'")
             return
+        # Set the input filename
         else:
             input_filename = _argv[1]
 
+        # Set the output filename
         if len(_argv) > 2:
             output_filename = _argv[2]
 
 
     # The output image
-    _canvas = Image.new('RGB', ( 100, 100 ))
-    canvas = _canvas.load()
+    # TODO: The image size should be configurable
+    _image = Image.new('RGB', ( 100, 100 ))
+    image = _image.load()
 
     # Width and height of the output image
-    WIDTH,HEIGHT = _canvas.size
+    WIDTH,HEIGHT = _image.size
+
+    # Background colour
+    # TODO: Make this configurable
+    BACKGROUND_COLOUR = ( 0, 0, 0 )
+
 
     # Focal length, aka zoom
+    # TODO: Make this configurable
     FOCAL_LENGTH = 1
 
-
     # Camera position
-    camera_x = 0
-    camera_y = 0
+    # TODO: Make this configurable
+    camera_x =  0
+    camera_y =  0
     camera_z = -5
 
     # The origin, aka camera's position as a vector
@@ -65,14 +113,18 @@ def main(_argv=None):
 
     # Read the world definition file
     with open(input_filename) as world_file:
-        # Iterable of all the quads in the world
-        quads = parse(world_file)
+        world = parse(world_file)
+        surfaces = [ o for o in world if isinstance(o, Quad) ]
+        lights = [ l for l in world if isinstance(l, PointLight) ]
 
+
+
+    # Raytracing
     for screen_y in range(HEIGHT):
         for screen_x in range(WIDTH):
 
-            # The pixel's colour -- set to the background colour
-            colour = ( 0, 0, 0 )
+            # Output pixel's colour
+            colour = BACKGROUND_COLOUR
 
             # The ray's x/y deltas.
             # These range from -1 to 1, where screen coordinate (0, 0)
@@ -82,106 +134,73 @@ def main(_argv=None):
             x_view = (screen_x / WIDTH ) - 0.5
             y_view = (screen_y / HEIGHT) - 0.5
 
-            # The ray vector
+            # The ray delta vector
             ray = numpy.array([ x_view, y_view, FOCAL_LENGTH ])
 
+            intersection = trace_ray(origin, ray, surfaces)
 
-            # The 't' value of the closest intersection
-            intersection_t = None
+            # Shading
+            # TODO: (texturing)
+            if intersection is not None:
 
-            # Check each quad for an intersection
-            for quad in quads:
-                p0 = quad[0] - origin
-                p1 = quad[1] - origin
-                p2 = quad[2] - origin
+                # The POI, in world coordinates
+                point = intersection.point
 
-                # NOTE: these formulas have been simplified, because
-                #       we subtract the quad's points back so we can
-                #       treat 'origin' as (0, 0, 0).
-                #
-                # The POI is
-                #
-                #   t*ray = p0 + u*(p1 - p0) + v*(p2 - p0)
-                #
-                # which can be rewritten as
-                #
-                #   -p0 = -t*ray + u*(p1 - p0) + v*(p2 - p0)
-                #
-                # which, in matrix form, is
-                #                                          [ t ]
-                #   [ -p0 ] = [ -ray  p1 - p0  p2 - p0 ] * | u |
-                #                                          [ v ]
-                #
-                # This can be solved for 't', 'u', and 'v'. If
-                # t E [0, 1],  then the POI is between 'origin' and
-                # 'ray'. If  u,v E [0,1],  then the POI is within the
-                # parallelogram formed by 'p0', 'p01', and 'p02'. If
-                # (u + v) <= 1,  then the POI is within the triangle
-                # formed by 'p0', 'p1', and 'p2'.
-                #
-                # If  -ray @ ((p1 - p0) x (p2 - p0)) = 0,  then the
-                # line is either in or parallel to the quad.
-                # Otherwise, 't', 'u', and 'v' can be found:
-                #
-                #       (p01 x p02) @ -p0
-                #   t = ------------------
-                #       -ray @ (p01 x p02)
-                #
-                #       (p02 x -ray) @ -p0
-                #   u = ------------------
-                #       -ray @ (p01 x p02)
-                #
-                #       (-ray x p01) @ -p0
-                #   v = ------------------
-                #       -ray @ (p01 x p02)
-                #
+                # Unit vector pointing from POI towards the origin
+                v = origin - point
+                v /= numpy.sqrt((v**2).sum())
 
-                p01 = (p1 - p0)
-                p02 = (p2 - p0)
+                # Lights
+                for light in lights:
 
-                # Calculate the determinant
-                determinant = numpy.dot(-ray, numpy.cross(p02, -p0))
+                    # Unit vector pointing from POI towards the light
+                    # source
+                    l = light.pos - point
+                    l /= numpy.sqrt((l**2).sum())
 
-                # No unique solutions, ray is either within or
-                # parallel to the quad
-                # TODO: add logic for the 'within' case
-                if determinant == 0:
-                    #print('determinant is 0, no unique solutions')
-                    pass
-                # The ray might intersect with the quad
-                else:
-                    t = (
-                          numpy.dot(numpy.cross(p01, p02), -p0)
-                        / numpy.dot(-ray, numpy.cross(p01, p02)))
-                    u = (
-                          numpy.dot(numpy.cross(p02, -ray), -p0)
-                        / numpy.dot(-ray, numpy.cross(p01, p02)))
-                    v = (
-                          numpy.dot(numpy.cross(-ray, p01), -p0)
-                        / numpy.dot(-ray, numpy.cross(p01, p02)))
+                    # Don't run the shader if the light is shadowed
+                    if (trace_ray(point, l, (
+                                s for s in surfaces
+                                if s != intersection.surface ))
+                            is None):
+                        # Intensity of the light (ranges from 0-1)
+                        intensity = tuple(
+                            c / 255 for c in light.colour)
 
-                    # The ray intersects, but behind the origin
-                    if t < 0:
-                        #print('behind!')
-                        pass
-                    # The ray intersects, but outside of the quad
-                    elif not (0 <= u and u <= 1
-                            and 0 <= v and v <= 1):
-                        #print('not in quad')
-                        pass
-                    # The ray intersects
-                    else:
-                        #print('soln:', t * ray)
-                        # This quad is the closest intersection
-                        if (intersection_t is None
-                                or t < intersection_t):
-                            intersection_t = t
-                            colour = quad.colour
+                        # Lambertian shading
+                        colour = tuple(intersection.surface.colour[i]
+                            * (intensity[i] * max(0, numpy.dot(
+                                    intersection.surface.normal, l)))
+                            for i in range(3))
 
-                canvas[( screen_x, screen_y )] = colour
+                        # Blinn-Phong shading
+                        # TODO: Make these configurable
+                        specular_coefficient = ( 255, 255, 255 )
+                        p = 1000
+
+                        h = (v + l) / numpy.linalg.norm(v + l)
+                        colour = tuple(colour[i]
+                            + specular_coefficient[i] * intensity[i]
+                            * (max(0, numpy.dot(
+                                intersection.surface.normal, h))**p)
+                            for i in range(3))
+
+                # Ambient shading
+                # TODO: Make these configurable
+                ambient = ( 128, 208, 255 )
+                ambient_brightness = 0.05
+
+                colour = tuple(
+                    colour[i] + (ambient[i] * ambient_brightness)
+                    for i in range(3))
+
+
+
+            image[(screen_x, screen_y)] = tuple(int(c) for c in colour)
+
 
     # Save the rendered image
-    _canvas.save(output_filename)
+    _image.save(output_filename)
 
 
 

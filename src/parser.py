@@ -6,53 +6,69 @@
 #   Raytracer file parser
 #
 
+import re
+
 from quad import Quad
+from pointlight import PointLight
 
 
 
 def parse(f):
     """ Parse a raytracer world file. """
 
-    # Strip comment and blank lines
-    data_lines = []
-    for line in f.read().splitlines():
-        line = line.strip()
-        if len(line) != 0:
-            if not line.startswith('#'):
-                data_lines.append(line)
+    UNNAMED_ATTRS = {
+        'Quad': 3,
+        'PointLight': 1
+        }
 
-    quad_defs = []
-    current_def = []
+    data = f.read()
 
-    # Split the data into separate quad definitions
-    for line in data_lines:
-        if line != ';':
-            current_def.append(line)
-        else:
-            quad_defs.append(current_def)
-            current_def = []
+    # parse the object definitions
+    definitions = re.finditer(
+        '^([A-Za-z]+)\n{\n((?:.*\n)*?)}', data, re.MULTILINE)
 
-    # Build the quad list
-    quads = []
-    for quad_def in quad_defs:
 
-        points = []
-        colour = ( 255, 255, 255 )
+    object_defs = []
 
-        # First 3 lines of the def are the 3D points defining the quad
-        for point in quad_def[0:3]:
-            p = point.split()
-            points.append([ float(v) for v in p ])
+    for match in definitions:
+        _type = match.group(1).strip()
+        body = match.group(2)
 
-        # Optional 4th line is the quad's colour
-        try:
-            colour = ( int(v, 16) for v in quad_def[3].split() )
-        except IndexError:
-            colour = ( 255, 255, 255 )
 
-        quads.append(Quad(points, colour))
+        # parse the unnamed attributes
+        unnamed_count = UNNAMED_ATTRS[_type]
+        raw_unnamed = body.splitlines()[:unnamed_count]
 
-    return tuple(quads)
+        unnamed = [
+            [ float(v) for v in attr.strip().split() ]
+            for attr in raw_unnamed ]
+
+
+        # parse named attributes
+        attributes = dict()
+
+        tmp2 = re.finditer('(.*?):(.*?)\n', body)
+        for m in tmp2:
+            name = m.group(1).strip()
+            value = m.group(2).strip()
+
+            attributes[name] = value
+
+
+        object_defs.append([ _type,
+            unnamed,
+            attributes ])
+
+
+    # build objects from the parsed data
+    output = []
+
+    for objdef in object_defs:
+        constructor = eval(objdef[0])
+        output.append(
+            constructor(*objdef[1], **objdef[2]))
+
+    return output
 
 
 
@@ -64,11 +80,10 @@ def main(_argv=None):
         input_filename = _argv[1]
 
     with open(input_filename, 'r') as f:
-        quads = parse(f)
+        objects = parse(f)
 
-        for quad in quads:
-            print(quad.points)
-            print(quad.colour)
+        for _object in objects:
+            print(str(_object))
 
 
 
